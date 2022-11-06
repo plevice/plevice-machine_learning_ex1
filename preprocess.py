@@ -43,17 +43,23 @@ def random_imputer(df, attribute):
 
 # -------------------------------- #
 
-def preprocess(X, attributes, categories_amount):
+def preprocess(X, y, attributes, categories):
 
     # handle missing values
-    X_nan = X.copy()
+    df_nan = pd.concat([X, y], axis=1)
     for attribute in attributes["rimp"]:
-        X_nan[attribute] = random_imputer(X, attribute)
+        df_nan[attribute] = random_imputer(X, attribute)
+    df_nan.dropna(inplace=True)
+    X_nan, y_nan = df_nan.iloc[:, :-1], df_nan.iloc[:, -1]
 
     # one hot encoding
-    X_ohe = pd.get_dummies(X_nan[attributes["ohe"]])
-    if X_ohe.shape[1] < categories_amount:
-        Exception(f"Unlucky train-test-split: OHE generates {X_ohe.shape[1]} < {categories_amount} new attributes")
+    X_ohe = pd.concat(
+        [
+            pd.get_dummies(X_nan[attribute].astype(pd.CategoricalDtype(categories=categories[attribute])))
+            for attribute in attributes["ohe"]
+        ],
+        axis=1
+    )
 
     # ohe = OneHotEncoder(categories=categories)
     # ohe.fit(X_nan[attributes["ohe"]])
@@ -74,7 +80,8 @@ def preprocess(X, attributes, categories_amount):
 
     # concatenate
     X_preprocessed = pd.concat([X_ohe, X_zsc, X_rest], axis=1)
+    y_preprocessed = y_nan
 
-    return X_preprocessed
+    return X_preprocessed, y_preprocessed
 
 # ---------------------------------------------------------------- #
