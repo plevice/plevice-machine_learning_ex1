@@ -45,7 +45,7 @@ class DatasetTrainer:
 
     def cross_validate(self, classifier, x, y, cv=10):
         self.__build_classifier(classifier)
-        return cross_val_score(self.clf, x, y, cv=cv)
+        return cross_val_score(self.clf, x, y, cv=cv, error_score="raise")
 
     def train(self, classifier, x_train, y_train):
         self.__build_classifier(classifier)

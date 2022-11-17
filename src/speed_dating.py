@@ -21,6 +21,9 @@ X.drop([attribute for attribute in df.columns if attribute[:2] == "d_" and attri
 # why bother with an id?
 X.drop("id", axis=1, inplace=True)
 
+# 78.5% missing values -> no reliable data especially for cross-validation...
+X.drop("expected_num_interested_in_me", axis=1, inplace=True)
+
 # ladies first
 X["gender"] = X["gender"].map({"female": 0, "male": 1})
 
@@ -52,12 +55,12 @@ for c in [
     BernoulliNB(),
     # MultinomialNB(),
     RandomForestClassifier(),
+    RandomForestClassifier(min_samples_split=3),
     DecisionTreeClassifier(max_depth=10),
-    # RandomForestClassifier(min_samples_split=3),
-    # KNeighborsClassifier(n_neighbors=3),
+    KNeighborsClassifier(n_neighbors=3),
     KNeighborsClassifier(n_neighbors=4),
     KNeighborsClassifier(n_neighbors=5)
 ]:
-    #  do_training(x, y, steps, c, cv=5)
-    do_training(X, y, steps, c, test_size=0.2)
+    do_training(X, y, steps, c, cv=5)
+    # do_training(X, y, steps, c, test_size=0.2)
 
