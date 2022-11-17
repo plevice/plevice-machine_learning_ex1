@@ -15,12 +15,12 @@ def do_training(x, y, preprocessing_steps, classifier, cv=None, test_size=0.2):
         trainer.add_preprocessing_step(step[0], step[1], step[2])
 
     print("Training dataset with ",
-          f"{classifier.__repr__()}, cv={cv}, test_size={test_size if cv is None else 1/cv}...", end="")
+          f"{classifier.__repr__()}, cv={cv}, test_size={test_size if cv is None else 1 / cv}...", end="")
     if cv:
         scores = trainer.cross_validate(classifier, x, y, cv=cv)
         print(f"done.\nModel scores: {scores}")
     else:
-        X_train, X_test, y_train, y_test = train_test_split(x, y, random_state=0, test_size=test_size)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, random_state=12, test_size=test_size)
         trainer.train(classifier, X_train, y_train)
         print("Testing dataset...", end="")
         score = trainer.test(X_test, y_test)
@@ -52,19 +52,18 @@ class DatasetTrainer:
         return self.clf.fit(x_train, y_train)
 
     def __build_classifier(self, classifier):
-        if len(self.transformers) == 0:
-            raise Exception("No preprocessing steps added!")
+        #      if len(self.transformers) == 0:
+        #        raise Exception("No preprocessing steps added!")
 
-        preprocessor = ColumnTransformer(
-            transformers=self.transformers
-        )
+        if len(self.transformers) > 0:
+            self.clf = Pipeline(
+                steps=[
+                    ("preprocessor", ColumnTransformer(transformers=self.transformers)),
 
-        self.clf = Pipeline(
-            steps=[
-                ("preprocessor", preprocessor),
-
-                #      ("f", FunctionTransformer(lambda x: x.todense(), accept_sparse=True)),
-                #  ("debug", Debugger()),
-                ("classifier", classifier)
-            ]
-        )
+                    #      ("f", FunctionTransformer(lambda x: x.todense(), accept_sparse=True)),
+                    #  ("debug", Debugger()),
+                    ("classifier", classifier)
+                ]
+            )
+        else:
+            self.clf = classifier
