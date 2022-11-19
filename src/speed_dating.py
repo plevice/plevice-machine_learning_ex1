@@ -1,7 +1,9 @@
+from matplotlib import pyplot as plt
+from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
 
 from src.utils.random_imputer import RandomImputer
-from src.utils.training import do_training
+from src.utils.training import do_training, plot_score, train_all_classifiers
 
 from preprocess import *
 from classify import *
@@ -21,7 +23,7 @@ X.drop([attribute for attribute in df.columns if attribute[:2] == "d_" and attri
 X.drop("id", axis=1, inplace=True)
 
 # 78.5% missing values -> no reliable data especially for cross-validation...
-X.drop("expected_num_interested_in_me", axis=1, inplace=True)
+X = X.dropna(thresh=len(df)*0.15, axis=1).copy()
 
 # ladies first
 X["gender"] = X["gender"].map({"female": 0, "male": 1})
@@ -50,16 +52,6 @@ steps = [
         ("enc", OneHotEncoder(handle_unknown="ignore"))
     ], categorical_features),
 ]
-for c in [
-    BernoulliNB(),
-    # MultinomialNB(),
-    RandomForestClassifier(),
-    RandomForestClassifier(min_samples_split=3),
-    DecisionTreeClassifier(max_depth=10),
-    KNeighborsClassifier(n_neighbors=3),
-    KNeighborsClassifier(n_neighbors=4),
-    KNeighborsClassifier(n_neighbors=5)
-]:
-    do_training(X, y, steps, c, cv=5)
-    do_training(X, y, steps, c, test_size=0.2)
 
+
+train_all_classifiers(X, y, steps)
