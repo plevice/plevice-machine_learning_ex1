@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
 
 from src.utils.random_imputer import RandomImputer
@@ -7,7 +8,7 @@ from src.utils.training import do_training
 from preprocess import *
 from classify import *
 
-df = pd.read_csv("/home/christoph/TU/9_WS22/ML/plevice-machine_learning_ex1/data/raw/speeddating/speeddating_raw.csv")
+df = pd.read_csv("data/raw/speeddating/speeddating_raw.csv")
 
 X = df.copy().drop(["match"], axis=1)
 y = df["match"].copy()
@@ -40,11 +41,11 @@ categorical_features = X.select_dtypes(include=['object']).columns.to_list()
 
 steps = [
     ("num_z", [
-        ("prep", RandomImputer()),
+        ("imputer", KNNImputer(n_neighbors=3)),
         ("scaler", StandardScaler())
     ], numeric_features_zscale),
-    ("en2c", [
-        ("prep", RandomImputer()),
+    ("minmax", [
+        ("imputer", KNNImputer(n_neighbors=3)),
         ("scaler", MinMaxScaler())
     ], numeric_features_minmax),
     ("enc", [

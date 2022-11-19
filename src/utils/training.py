@@ -15,7 +15,7 @@ def do_training(x, y, preprocessing_steps, classifier, cv=None, test_size=0.2):
         trainer.add_preprocessing_step(step[0], step[1], step[2])
 
     print("Training dataset with ",
-          f"{classifier.__repr__()}, cv={cv}, test_size={test_size if cv is None else 1 / cv}...", end="")
+          f"{classifier.__repr__()}, cv={cv}, test_size={test_size if cv is None else ''}...", end="")
     if cv:
         scores = trainer.cross_validate(classifier, x, y, cv=cv)
         print(f"done.\nModel scores: {scores}")
@@ -26,6 +26,21 @@ def do_training(x, y, preprocessing_steps, classifier, cv=None, test_size=0.2):
         score = trainer.test(X_test, y_test)
         print("Done.")
         print("done. Model score: %.5f" % score)
+
+
+def do_prediction(X_train, y_train, X_test, preprocessing_steps, classifier):
+    trainer = DatasetTrainer()
+    for step in preprocessing_steps:
+        trainer.add_preprocessing_step(step[0], step[1], step[2])
+
+    print("Training dataset with ",
+          f"{classifier.__repr__()}...", end="")
+
+    trainer.train(classifier, X_train, y_train)
+    print("Predicting dataset...", end="")
+    res = trainer.predict(X_test)
+    print("Done.")
+    return res
 
 
 class DatasetTrainer:
@@ -42,6 +57,12 @@ class DatasetTrainer:
             raise Exception("Called test before train!")
 
         return self.clf.score(x_test, y_test)
+
+    def predict(self, x_test):
+        if self.clf is None:
+            raise Exception("Called test before train!")
+
+        return self.clf.predict(x_test)
 
     def cross_validate(self, classifier, x, y, cv=10):
         self.__build_classifier(classifier)
