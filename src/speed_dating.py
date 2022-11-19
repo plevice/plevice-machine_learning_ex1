@@ -1,5 +1,3 @@
-import numpy as np
-from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
 
 from src.utils.random_imputer import RandomImputer
@@ -41,11 +39,11 @@ categorical_features = X.select_dtypes(include=['object']).columns.to_list()
 
 steps = [
     ("num_z", [
-        ("imputer", KNNImputer(n_neighbors=3)),
+        ("imputer", RandomImputer()),
         ("scaler", StandardScaler())
     ], numeric_features_zscale),
     ("minmax", [
-        ("imputer", KNNImputer(n_neighbors=3)),
+        ("imputer", RandomImputer()),
         ("scaler", MinMaxScaler())
     ], numeric_features_minmax),
     ("enc", [
@@ -63,5 +61,5 @@ for c in [
     KNeighborsClassifier(n_neighbors=5)
 ]:
     do_training(X, y, steps, c, cv=5)
-    # do_training(X, y, steps, c, test_size=0.2)
+    do_training(X, y, steps, c, test_size=0.2)
 
