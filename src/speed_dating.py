@@ -54,3 +54,4 @@ steps = [
 
 
 train_all_classifiers(X, y, steps, cv=5)
+train_all_classifiers(X, y, steps)

@@ -61,22 +61,12 @@ class DatasetTrainer:
     def add_preprocessing_step(self, name, steps, columns):
         self.transformers.append((name, Pipeline(steps=steps), columns))
 
-    def vals_from_conf_matrix(self, cm, plot=True):
-        tp = cm[0][0]
-        fp = cm[0][1]
-        fn = cm[1][0]
-        tn = cm[1][1]
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
-        f1 = 2 * ((precision * recall) / (precision + recall))
+    def plot_matrix(self, cm):
+        plt.figure(figsize=(7, 4))
+        plt.suptitle(self.name)
+        sns.heatmap(cm, annot=True, fmt="d")
+        plt.show()
 
-        if plot:
-            plt.figure(figsize=(7, 4))
-            plt.suptitle(self.name)
-            sns.heatmap(cm, annot=True, fmt="d")
-            plt.show()
-
-        return precision, recall, f1
 
     def test(self, x_test, y_test):
         if self.clf is None:
@@ -84,10 +74,12 @@ class DatasetTrainer:
 
         y_pred = self.clf.predict(x_test)
         y_true = y_test
-        return precision_score(y_true, y_pred, average='micro'), recall_score(y_true, y_pred, average='micro'), f1_score(y_true, y_pred, average='micro')
 
-        # cm = confusion_matrix(y_test, self.clf.predict(x_test))
-        # return self.vals_from_conf_matrix(cm)
+        cm = confusion_matrix(y_test, self.clf.predict(x_test))
+        self.plot_matrix(cm)
+
+        return precision_score(y_true, y_pred, average='macro'), recall_score(y_true, y_pred, average='macro'), f1_score(y_true, y_pred, average='macro')
+
 
     def predict(self, x_test):
         if self.clf is None:
@@ -97,9 +89,11 @@ class DatasetTrainer:
 
     def cross_validate(self, classifier, x, y, cv=5):
         self.__build_classifier(classifier)
-        vals = cross_validate(self.clf, x, y, scoring=['f1_micro', 'recall_micro', 'precision_micro'], error_score="raise", cv=cv)
+        vals = cross_validate(self.clf, x, y, scoring=['f1_macro', 'recall_macro', 'precision_macro'], error_score="raise", cv=cv)
+
         print(vals)
-        return vals['test_f1_micro'].mean(), vals['test_recall_micro'].mean(), vals['test_precision_micro'].mean()
+        self.plot_matrix(confusion_matrix(y, cross_val_predict(self.clf, x, y, cv=cv)))
+        return vals['test_f1_macro'].mean(), vals['test_recall_macro'].mean(), vals['test_precision_macro'].mean()
 
     def train(self, classifier, x_train, y_train):
         self.__build_classifier(classifier)
@@ -135,10 +129,11 @@ def plot_score(plot_data, title, ylim=(0.85, 1)):
     plt.show()
 
 
-def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), cv=None, multi=False):
+def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), plot_y_max=(1, 1, 1), cv=None, multi=False):
     plot_data_prec = {}
     plot_data_rec = {}
     plot_data_f1 = {}
+
     i = 0
     for c in get_classifiers(multi=multi):
         scores = do_training(X, y, steps, c, test_size=0.2, cv=cv)
@@ -148,13 +143,13 @@ def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), cv=None, multi
         i = i + 1
 
     cv_string = "" if cv is None else f" (cv={cv})"
-    plot_score(plot_data_prec, "Precision" + cv_string, (plot_y[0], 1))
-    plot_score(plot_data_rec, "Recall" + cv_string, (plot_y[1], 1))
-    plot_score(plot_data_f1, "F1 Score" + cv_string, (plot_y[2], 1))
+    plot_score(plot_data_prec, "Precision" + cv_string, (plot_y[0], plot_y_max[0]))
+    plot_score(plot_data_rec, "Recall" + cv_string, (plot_y[1], plot_y_max[1]))
+    plot_score(plot_data_f1, "F1 Score" + cv_string, (plot_y[2], plot_y_max[2]))
 
 
-def get_classifiers(multi = False):
-    res = [
+def get_classifiers(multi=False):
+    knns = [
         KNeighborsClassifier(n_neighbors=1, weights='uniform'),
         KNeighborsClassifier(n_neighbors=5, weights='uniform'),
         KNeighborsClassifier(n_neighbors=10, weights='uniform'),
@@ -169,6 +164,8 @@ def get_classifiers(multi = False):
         KNeighborsClassifier(n_neighbors=5, weights='distance', metric='cityblock'),
         KNeighborsClassifier(n_neighbors=10, weights='distance', metric='cityblock'),
         KNeighborsClassifier(n_neighbors=50, weights='distance', metric='cityblock'),
+    ]
+    dcts = [
 
         DecisionTreeClassifier(max_depth=10, criterion='gini'),
         DecisionTreeClassifier(max_depth=20, criterion='gini'),
@@ -177,15 +174,14 @@ def get_classifiers(multi = False):
         DecisionTreeClassifier(max_depth=20, criterion='entropy'),
         DecisionTreeClassifier(max_depth=30, criterion='entropy'),
     ]
-    if multi:
-        return res + [
+    nb = [
             MultinomialNB(alpha=0),
             MultinomialNB(alpha=1),
             MultinomialNB(alpha=10)
-        ]
-    else:
-        return res + [
+        ] if multi else [
             BernoulliNB(alpha=0),
             BernoulliNB(alpha=1),
             BernoulliNB(alpha=10)
         ]
+    return knns + nb + dcts
+
