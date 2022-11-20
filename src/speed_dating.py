@@ -22,8 +22,7 @@ X.drop([attribute for attribute in df.columns if attribute[:2] == "d_" and attri
 # why bother with an id?
 X.drop("id", axis=1, inplace=True)
 
-# 78.5% missing values -> no reliable data especially for cross-validation...
-X = X.dropna(thresh=len(df)*0.15, axis=1).copy()
+X = X.dropna(thresh=len(df)*0.75, axis=1).copy()
 
 # ladies first
 X["gender"] = X["gender"].map({"female": 0, "male": 1})
@@ -54,4 +53,4 @@ steps = [
 ]
 
 
-train_all_classifiers(X, y, steps)
+train_all_classifiers(X, y, steps, cv=5)

@@ -1,11 +1,7 @@
-import numpy as np
-from sklearn.impute import KNNImputer
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
-from src.utils.random_imputer import RandomImputer
-from src.utils.training import do_training, do_prediction
-from sklearn.feature_selection import RFECV
+from src.utils.training import train_all_classifiers
 
 from preprocess import *
 from classify import *
@@ -52,12 +48,6 @@ X_test.drop(std_err_cols, axis=1, inplace=True)
 # X_test.drop([col for col in X_test.columns if col.endswith('Worst')], axis=1, inplace=True)
 
 classifier = RandomForestClassifier()
-# The "accuracy" scoring is proportional to the number of correct classifications
-# rfecv = RFECV(estimator=classifier, step=1, cv=10, scoring='accuracy')
-# rfecv = rfecv.fit(X_train, y_train)
-# best_f = X_train.columns[rfecv.support_]
-
-# print('Best features :', best_f)
 
 numeric_features_zscale = X_train.select_dtypes(
     include=np.number).columns.tolist()
@@ -68,6 +58,11 @@ steps = [
     ], numeric_features_zscale),
 ]
 
-res_list = do_prediction(X_train, y_train, X_test, steps, classifier)
-pd.DataFrame({"ID": test_ids, "class": res_list}).to_csv("data/raw/breast-cancer/breast-cancer-diagnostic.shuf"
-                                                         ".sol.ex.csv", index=False)
+
+# train_all_classifiers(X_train, y_train, steps, (0.84, 0.85, 0.87))
+train_all_classifiers(X_train, y_train, steps, (0.84, 0.85, 0.87), cv=5)
+
+# for keggle
+# res_list = do_prediction(X_train, y_train, X_test, steps, classifier)
+# pd.DataFrame({"ID": test_ids, "class": res_list}).to_csv("data/raw/breast-cancer/breast-cancer-diagnostic.shuf"
+#                                                          ".sol.ex.csv", index=False)

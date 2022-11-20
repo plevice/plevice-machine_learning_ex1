@@ -1,15 +1,13 @@
 from sklearn.compose import ColumnTransformer
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix, recall_score, precision_score, f1_score
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score, train_test_split
-import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_predict, cross_validate
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeClassifier
-
-from src.utils.pipeline_debugger import Debugger
 
 
 def do_training(x, y, preprocessing_steps, classifier, cv=None, test_size=0.2):
@@ -25,15 +23,16 @@ def do_training(x, y, preprocessing_steps, classifier, cv=None, test_size=0.2):
     if cv:
         scores = trainer.cross_validate(classifier, x, y, cv=cv)
         print(f"done.\nModel scores: {scores}")
+        return scores
     else:
-        X_train, X_test, y_train, y_test = train_test_split(x, y, random_state=12, test_size=test_size)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, random_state=123, test_size=test_size)
 
         trainer.train(classifier, X_train, y_train)
         print("Testing dataset...", end="")
-        score = trainer.test(X_test, y_test)
+        scores = trainer.test(X_test, y_test)
         print("Done.")
-        print(f"done. Model scores: {score}")
-        return score
+        print(f"done. Model scores: {scores}")
+        return scores
 
 
 def do_prediction(X_train, y_train, X_test, preprocessing_steps, classifier):
@@ -62,14 +61,7 @@ class DatasetTrainer:
     def add_preprocessing_step(self, name, steps, columns):
         self.transformers.append((name, Pipeline(steps=steps), columns))
 
-    def test(self, x_test, y_test):
-        if self.clf is None:
-            raise Exception("Called test before train!")
-
-        plt.figure(figsize=(7, 4))
-        plt.suptitle(self.name)
-        cm = confusion_matrix(y_test, self.clf.predict(x_test))
-
+    def vals_from_conf_matrix(self, cm, plot=False):
         tp = cm[0][0]
         fp = cm[0][1]
         fn = cm[1][0]
@@ -78,10 +70,24 @@ class DatasetTrainer:
         recall = tp / (tp + fn)
         f1 = 2 * ((precision * recall) / (precision + recall))
 
-        sns.heatmap(cm, annot=True, fmt="d")
-        plt.show()
+        if plot:
+            plt.figure(figsize=(7, 4))
+            plt.suptitle(self.name)
+            sns.heatmap(cm, annot=True, fmt="d")
+            plt.show()
 
         return precision, recall, f1
+
+    def test(self, x_test, y_test):
+        if self.clf is None:
+            raise Exception("Called test before train!")
+
+        y_pred = self.clf.predict(x_test)
+        y_true = y_test
+        return precision_score(y_true, y_pred), recall_score(y_true, y_pred), f1_score(y_true, y_pred)
+
+        # cm = confusion_matrix(y_test, self.clf.predict(x_test))
+        # return self.vals_from_conf_matrix(cm)
 
     def predict(self, x_test):
         if self.clf is None:
@@ -89,9 +95,11 @@ class DatasetTrainer:
 
         return self.clf.predict(x_test)
 
-    def cross_validate(self, classifier, x, y, cv=10):
+    def cross_validate(self, classifier, x, y, cv=5):
         self.__build_classifier(classifier)
-        return cross_val_score(self.clf, x, y, cv=cv, error_score="raise")
+        vals = cross_validate(self.clf, x, y, scoring=['f1', 'recall', 'precision'])
+        print(vals)
+        return vals['test_f1'].mean(), vals['test_recall'].mean(), vals['test_precision'].mean()
 
     def train(self, classifier, x_train, y_train):
         self.__build_classifier(classifier)
@@ -127,23 +135,24 @@ def plot_score(plot_data, title, ylim=(0.85, 1)):
     plt.show()
 
 
-
-def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85)):
+def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), cv=None):
     plot_data_prec = {}
     plot_data_rec = {}
     plot_data_f1 = {}
     i = 0
     for c in get_classifiers():
-        name = c.__repr__()
         # do_training(X, y, steps, c, cv=5)
-        scores = do_training(X, y, steps, c, test_size=0.2)
+        scores = do_training(X, y, steps, c, test_size=0.2, cv=cv)
         plot_data_prec[i] = scores[0]
         plot_data_rec[i] = scores[1]
         plot_data_f1[i] = scores[2]
         i = i + 1
-    plot_score(plot_data_prec, "Precision", (plot_y[0], 1))
-    plot_score(plot_data_rec, "Recall", (plot_y[1], 1))
-    plot_score(plot_data_f1, "F1 Score", (plot_y[2], 1))
+
+    cv_string = "" if cv is None else f" (cv={cv})"
+    plot_score(plot_data_prec, "Precision" + cv_string, (plot_y[0], 1))
+    plot_score(plot_data_rec, "Recall" + cv_string, (plot_y[1], 1))
+    plot_score(plot_data_f1, "F1 Score" + cv_string, (plot_y[2], 1))
+
 
 def get_classifiers():
     return [
