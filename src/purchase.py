@@ -10,20 +10,20 @@ from sklearn.feature_selection import RFECV
 from preprocess import *
 from classify import *
 
-df_train = pd.read_csv("../data/raw/purchase/purchase600-100cls-15k.lrn.csv", sep=",")
-df_test = pd.read_csv("../data/raw/purchase/purchase600-100cls-15k.tes.csv", sep=",")
+df_train = pd.read_csv("data/raw/purchase/purchase600-100cls-15k.lrn.csv", sep=",")
+df_test = pd.read_csv("data/raw/purchase/purchase600-100cls-15k.tes.csv", sep=",")
 
 # train
-var_columns = [c for c in df_train.columns if c not in ['ID','class']]
+var_columns = [c for c in df_train.columns if c not in ['ID', 'class']]
 
-#Create Train data on whole DataSet (needed for final modelfit and CV)
-X_train = df_train.loc[:,var_columns].copy()
-y_train = df_train.loc[:,'class'].copy()
-X_test = df_test.loc[:,var_columns].copy()
+# Create Train data on whole DataSet (needed for final modelfit and CV)
+X_train = df_train.loc[:, var_columns].copy()
+y_train = df_train.loc[:, 'class'].copy()
+X_test = df_test.loc[:, var_columns].copy()
 
 # Plot heatmap for correlation
-_, ax = plt.subplots(figsize=(31, 31))
-sns.heatmap(X_train.corr(), annot=True, linewidths=1, fmt='.2f', ax=ax)
+# _, ax = plt.subplots(figsize=(31, 31))
+# sns.heatmap(X_train.corr(), annot=True, linewidths=1, fmt='.2f', ax=ax)
 # plt.show()
 
 
@@ -44,4 +44,4 @@ steps = [
     ], numeric_features_zscale),
 ]
 
-train_all_classifiers(X_train, y_train, steps)
+train_all_classifiers(X_train, y_train, steps, cv=2, multi=True)

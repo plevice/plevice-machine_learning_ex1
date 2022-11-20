@@ -1,7 +1,7 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, recall_score, precision_score, f1_score
-from sklearn.naive_bayes import BernoulliNB
+from sklearn.naive_bayes import BernoulliNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, cross_val_predict, cross_validate
@@ -61,7 +61,7 @@ class DatasetTrainer:
     def add_preprocessing_step(self, name, steps, columns):
         self.transformers.append((name, Pipeline(steps=steps), columns))
 
-    def vals_from_conf_matrix(self, cm, plot=False):
+    def vals_from_conf_matrix(self, cm, plot=True):
         tp = cm[0][0]
         fp = cm[0][1]
         fn = cm[1][0]
@@ -84,7 +84,7 @@ class DatasetTrainer:
 
         y_pred = self.clf.predict(x_test)
         y_true = y_test
-        return precision_score(y_true, y_pred), recall_score(y_true, y_pred), f1_score(y_true, y_pred)
+        return precision_score(y_true, y_pred, average='micro'), recall_score(y_true, y_pred, average='micro'), f1_score(y_true, y_pred, average='micro')
 
         # cm = confusion_matrix(y_test, self.clf.predict(x_test))
         # return self.vals_from_conf_matrix(cm)
@@ -97,9 +97,9 @@ class DatasetTrainer:
 
     def cross_validate(self, classifier, x, y, cv=5):
         self.__build_classifier(classifier)
-        vals = cross_validate(self.clf, x, y, scoring=['f1', 'recall', 'precision'])
+        vals = cross_validate(self.clf, x, y, scoring=['f1_micro', 'recall_micro', 'precision_micro'], error_score="raise", cv=cv)
         print(vals)
-        return vals['test_f1'].mean(), vals['test_recall'].mean(), vals['test_precision'].mean()
+        return vals['test_f1_micro'].mean(), vals['test_recall_micro'].mean(), vals['test_precision_micro'].mean()
 
     def train(self, classifier, x_train, y_train):
         self.__build_classifier(classifier)
@@ -135,13 +135,12 @@ def plot_score(plot_data, title, ylim=(0.85, 1)):
     plt.show()
 
 
-def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), cv=None):
+def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), cv=None, multi=False):
     plot_data_prec = {}
     plot_data_rec = {}
     plot_data_f1 = {}
     i = 0
-    for c in get_classifiers():
-        # do_training(X, y, steps, c, cv=5)
+    for c in get_classifiers(multi=multi):
         scores = do_training(X, y, steps, c, test_size=0.2, cv=cv)
         plot_data_prec[i] = scores[0]
         plot_data_rec[i] = scores[1]
@@ -154,8 +153,8 @@ def train_all_classifiers(X, y, steps, plot_y=(0.85, 0.85, 0.85), cv=None):
     plot_score(plot_data_f1, "F1 Score" + cv_string, (plot_y[2], 1))
 
 
-def get_classifiers():
-    return [
+def get_classifiers(multi = False):
+    res = [
         KNeighborsClassifier(n_neighbors=1, weights='uniform'),
         KNeighborsClassifier(n_neighbors=5, weights='uniform'),
         KNeighborsClassifier(n_neighbors=10, weights='uniform'),
@@ -171,10 +170,6 @@ def get_classifiers():
         KNeighborsClassifier(n_neighbors=10, weights='distance', metric='cityblock'),
         KNeighborsClassifier(n_neighbors=50, weights='distance', metric='cityblock'),
 
-        BernoulliNB(alpha=0),
-        BernoulliNB(alpha=1),
-        BernoulliNB(alpha=10),
-
         DecisionTreeClassifier(max_depth=10, criterion='gini'),
         DecisionTreeClassifier(max_depth=20, criterion='gini'),
         DecisionTreeClassifier(max_depth=30, criterion='gini'),
@@ -182,3 +177,15 @@ def get_classifiers():
         DecisionTreeClassifier(max_depth=20, criterion='entropy'),
         DecisionTreeClassifier(max_depth=30, criterion='entropy'),
     ]
+    if multi:
+        return res + [
+            MultinomialNB(alpha=0),
+            MultinomialNB(alpha=1),
+            MultinomialNB(alpha=10)
+        ]
+    else:
+        return res + [
+            BernoulliNB(alpha=0),
+            BernoulliNB(alpha=1),
+            BernoulliNB(alpha=10)
+        ]
