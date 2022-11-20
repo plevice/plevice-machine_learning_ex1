@@ -3,6 +3,8 @@ from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from src.speed_dating import numeric_features_minmax
 from src.utils.random_imputer import RandomImputer
 from src.utils.training import do_training, do_prediction, train_all_classifiers
 from sklearn.feature_selection import RFECV
@@ -10,8 +12,8 @@ from sklearn.feature_selection import RFECV
 from preprocess import *
 from classify import *
 
-df_train = pd.read_csv("data/raw/purchase/purchase600-100cls-15k.lrn.csv", sep=",")
-df_test = pd.read_csv("data/raw/purchase/purchase600-100cls-15k.tes.csv", sep=",")
+df_train = pd.read_csv("../data/raw/purchase/purchase600-100cls-15k.lrn.csv", sep=",")
+df_test = pd.read_csv("../data/raw/purchase/purchase600-100cls-15k.tes.csv", sep=",")
 
 # train
 var_columns = [c for c in df_train.columns if c not in ['ID', 'class']]
@@ -39,9 +41,10 @@ numeric_features_zscale = X_train.select_dtypes(
     include=np.number).columns.tolist()
 
 steps = [
-    ("num_z", [
-        ("scaler", StandardScaler())
-    ], numeric_features_zscale),
+    ("minmax", [
+        ("imputer", RandomImputer()),
+        ("scaler", MinMaxScaler())
+    ], numeric_features_minmax),
 ]
 
 train_all_classifiers(X_train, y_train, steps, cv=2, multi=True)
