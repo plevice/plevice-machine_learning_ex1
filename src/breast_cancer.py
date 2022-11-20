@@ -59,7 +59,7 @@ steps = [
 ]
 
 
-# train_all_classifiers(X_train, y_train, steps, (0.84, 0.85, 0.87))
+train_all_classifiers(X_train, y_train, steps, (0.84, 0.85, 0.87))
 train_all_classifiers(X_train, y_train, steps, (0.84, 0.85, 0.87), cv=5)
 
 # for keggle
